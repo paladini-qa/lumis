@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 
 // Mock react-native-reanimated for Jest environment
 jest.mock('react-native-reanimated', () => {
@@ -95,5 +95,49 @@ describe('DashboardScreen Component Layout & State Integration (TDD - RED)', () 
 
     // Press a tab
     fireEvent.press(cardsTab);
+  });
+
+  it('should render the Google Wallet interceptor toggle and mutate the state when pressed', () => {
+    const { getByTestId, getByText } = render(<DashboardScreen />);
+    
+    // Check toggle exists
+    expect(getByText('Google Wallet Interceptor')).toBeTruthy();
+    
+    const toggleButton = getByTestId('wallet-interceptor-toggle');
+    expect(toggleButton).toBeTruthy();
+
+    // Toggle on
+    fireEvent.press(toggleButton);
+    expect(useFinanceStore.getState().enableWalletInterceptor).toBe(true);
+
+    // Toggle off
+    fireEvent.press(toggleButton);
+    expect(useFinanceStore.getState().enableWalletInterceptor).toBe(false);
+  });
+
+  it('should render the DraftReviewModal when a draft is added to the wallet queue', () => {
+    // Before draft: Modal is not visible / no draft elements are rendered
+    const { queryByText } = render(<DashboardScreen />);
+    expect(queryByText('NEW TRANSACTION DETECTED')).toBeNull();
+
+    // Add draft directly to store within act() to prevent warnings
+    act(() => {
+      useFinanceStore.getState().addWalletDraft({
+        amount: 49.90,
+        date: new Date('2026-05-26'),
+        description: 'Starbucks Coffee',
+        paymentMethodSuggested: 'credit',
+        notes: 'Test draft',
+      });
+    });
+
+    const { getByText, getByPlaceholderText } = render(<DashboardScreen />);
+    
+    // Modal header and pre-filled contents should render successfully
+    expect(getByText('NEW TRANSACTION DETECTED')).toBeTruthy();
+    expect(getByText('R$ 49,90')).toBeTruthy();
+    
+    const descInput = getByPlaceholderText('Merchant name');
+    expect(descInput.props.value).toBe('Starbucks Coffee');
   });
 });

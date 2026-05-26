@@ -5,13 +5,21 @@ import { BalanceCard } from '../components/BalanceCard';
 import { QuickActionsRow } from '../components/QuickActionsRow';
 import { BottomTabBar } from '../components/BottomTabBar';
 import { TransactionModal } from '../components/TransactionModal';
+import { DraftReviewModal } from '../components/DraftReviewModal';
 import { TransactionListFilters } from '../components/TransactionListFilters';
 import { Colors } from '../theme/colors';
 import { formatBRL } from '../theme/currency';
 import Svg, { Path } from 'react-native-svg';
 
 export function DashboardScreen() {
-  const { primaryBalance, isPrivate, togglePrivacy, transactions } = useFinanceStore();
+  const { 
+    primaryBalance, 
+    isPrivate, 
+    togglePrivacy, 
+    transactions,
+    enableWalletInterceptor,
+    setEnableWalletInterceptor
+  } = useFinanceStore();
   const [activeTab, setActiveTab] = useState('home');
 
   // Modal and filters state
@@ -159,6 +167,61 @@ export function DashboardScreen() {
               isPrivate={isPrivate}
               onTogglePrivacy={togglePrivacy}
             />
+          </View>
+
+          {/* Google Wallet Interceptor Toggle Bar */}
+          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: Colors.surface,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: `${Colors.gold.DEFAULT}1A`,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ marginRight: 8 }}>
+                  <Path
+                    d="M17 18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10z"
+                    stroke={Colors.gold.DEFAULT}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Path d="M12 11h.01M12 15h.01" stroke={Colors.gold.DEFAULT} strokeWidth="3" strokeLinecap="round" />
+                </Svg>
+                <Text style={{ fontFamily: 'Manrope', fontSize: 13, fontWeight: '600', color: Colors.ivory.DEFAULT }}>
+                  Google Wallet Interceptor
+                </Text>
+              </View>
+              <Pressable
+                testID="wallet-interceptor-toggle"
+                onPress={() => setEnableWalletInterceptor(!enableWalletInterceptor)}
+                style={{
+                  width: 44,
+                  height: 24,
+                  borderRadius: 12,
+                  backgroundColor: enableWalletInterceptor ? Colors.positive : `${Colors.ivory.mute}33`,
+                  justifyContent: 'center',
+                  paddingHorizontal: 2,
+                }}
+              >
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: Colors.background,
+                    alignSelf: enableWalletInterceptor ? 'flex-end' : 'flex-start',
+                  }}
+                />
+              </Pressable>
+            </View>
           </View>
 
           {/* quick actions row */}
@@ -417,6 +480,9 @@ export function DashboardScreen() {
           visible={isModalVisible}
           onClose={() => setIsModalVisible(false)}
         />
+
+        {/* Google Wallet Draft Review Modal */}
+        <DraftReviewModal />
       </View>
     </SafeAreaView>
   );
