@@ -20,4 +20,9 @@ jobs:
 
       - name: Run database migrations push
         run: |
+          if [ -z "${{ secrets.SUPABASE_DB_URL }}" ]; then
+            echo "::error::The SUPABASE_DB_URL secret is empty or has not been configured in your GitHub Repository Secrets."
+            echo "::error::Please go to Settings > Secrets and variables > Actions on GitHub and add a new repository secret named SUPABASE_DB_URL."
+            exit 1
+          fi
           supabase db push --db-url "${{ secrets.SUPABASE_DB_URL }}"
