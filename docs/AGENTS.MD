@@ -110,8 +110,8 @@ Once you finish a coding, configuration, or structural task:
   - [ ] Configure custom native Android module / bridge for `NotificationListenerService`
   - [ ] Configure package filters for `com.google.android.apps.wallet` and `com.google.android.gms`
   - [ ] Implement system-wide permission request flow for "Notification Access"
-- [ ] **Local Parse & Action Pipeline:**
-  - [ ] Create robust regex parsing utility for Google Wallet (BRL transaction text formatting)
+- [/ ] **Local Parse & Action Pipeline:**
+  - [x] Create robust regex parsing utility for Google Wallet (BRL transaction text formatting)
   - [ ] Configure local push notification trigger via `expo-notifications` on background match
   - [ ] Integrate deep linking navigation flow from notification click to Draft Review modal
 - [/ ] **Review Card & Settings Settings:**
