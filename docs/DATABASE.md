@@ -103,6 +103,7 @@ create table public.user_settings (
     primary_balance numeric(12, 2) default 0.00 not null,
     theme_preference text default 'dark' not null,
     friends_list jsonb default '[]'::jsonb not null, -- Array of local friend profiles
+    enable_wallet_interceptor boolean default false not null, -- Toggle Google Wallet interceptor
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

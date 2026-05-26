@@ -10,6 +10,7 @@ We will co-create and refine this document epic by epic before writing code:
 * **[COMPLETE] Epic 2: Organization & Categorization** (Accounts & Credit Cards, Custom tags, Auto-categorization)
 * **[COMPLETE] Epic 3: Planning & Analytics** (Savings Goals, Statement-based Reporting)
 * **[COMPLETE] Epic 4: Artificial Intelligence** (Lumis Chatbot secure context, Multimodal Smart Input Draft Card)
+* **[COMPLETE] Epic 5: Automated Capture** (Google Wallet Interceptor & Draft Alerts)
 
 ---
 
@@ -207,5 +208,42 @@ To guarantee AA contrast accessibility and maximum luxury appeal:
     }
     ```
   * The client receives this JSON, maps it to the UI form, allows user adjustments, and inserts it into the Supabase `transactions` table upon user confirmation.
+
+---
+
+## 📲 Epic 5: Automated Capture (Google Wallet Interceptor)
+
+### 5.1 Google Wallet Interceptor & Notification Service
+* **Description:** A native Android background service (`NotificationListenerService`) that intercepts transaction notifications from Google Wallet (or Google Play Services) to instantly prompt the user to log them into Lumis.
+* **User Stories:**
+  * As a user, I want the Lumis app to catch transactions from my Google Wallet notifications in real-time.
+  * As a user, I want to receive a high-priority local Lumis notification immediately after a Google Wallet transaction, asking me to review and save it.
+  * As a user, I want to tap the notification and be taken directly to a pre-filled **Draft Review Card** in the app.
+  * As a user, I want a settings toggle under my profile to easily enable or disable this Google Wallet notification interceptor.
+* **Technical Architecture (Android Native Bridge):**
+  * **Native Service:** A custom Android package listener listening to system notifications.
+  * **Package Filters:** Filter specifically for notifications originating from `com.google.android.apps.walletnfcrel`, `com.google.android.apps.wallet`, and `com.google.android.gms` (Google Play Services, which often issues Google Pay/Wallet transaction notifications).
+  * **Permission Gate:** Android requires `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`. The app will guide the user to their device's "Notification Access" settings screen to toggle access for Lumis.
+  * **iOS Sandboxing Clarification:** On iOS, due to Apple’s strict app sandboxing rules, third-party apps cannot access notifications from Apple Wallet, Google Wallet, or other apps. Thus, this automated intercept feature is **Android-only**. For iOS users, Lumis provides fallback support via fast Multimodal Smart Input (Receipt photo / Voice memo capture) and manual entry.
+* **Notification Processing & Regex Engine:**
+  * When a target notification is intercepted, the service extracts the Title and Text contents.
+  * An optimized local regex engine parses standard Google Wallet BRL notification strings:
+    * *Example Notification:* `"R$ 29,90 paid at Starbucks"` or `"Compra de R$ 120,50 no Pão de Açúcar com Mastercard"`
+    * **Regex Pattern 1 (Amount):** `R$\s*([0-9\.\,]+)` -> Parsed and formatted to numeric float.
+    * **Regex Pattern 2 (Merchant):** `(?:at|no|na|em)\s+([^,\.\n\-\_]+)` -> Extracts the merchant name, stripping excess words.
+    * **Timestamp:** Extracted from the notification's post time.
+* **UI/UX Flow & Animations:**
+  * **System Notification Tap:** Tapping the intercepted push notification opens the app and routes directly via Expo Router to a modal overlay.
+  * **Draft Review Card Slide-up:** A beautiful glassmorphic review card slides up from the bottom of the screen with a spring-bounce effect (`damping: 12`, `stiffness: 110`). The card is pre-filled with the parsed Merchant, Amount (formatted in BRL), Date, and suggests the Category (via Auto-Categorization rule matches) and the Payment Method (if the card name was identified in the notification text).
+  * **Slide-away on Confirm:** Tapping "Confirm" triggers a premium champagne-gold checkmark animation, saves the transaction to Supabase, updates the `primary_balance`, and slides the card out of the screen.
+* **State & Data Transitions / Calculations:**
+  * Saves locally to a Zustand draft queue (`walletDrafts: []`) for offline resilience.
+  * Once the user reviews and confirms, it performs the standard transactional flow:
+    * If linked to a `credit` card, calculates `statement_month` using the boundary formula.
+    * If linked to a `debit` card, deducts the amount from the unified `primary_balance`.
+* **Edge Cases & Error Handling:**
+  * **Double Interception:** Prevent duplicate entries if Google Wallet sends multiple notifications for a single transaction (e.g. authorization followed by capture) by deduplicating notifications with identical merchant names and amounts within a 60-second window.
+  * **Incorrect Parsing Fallback:** If regex parsing fails to extract the amount or merchant reliably, the local notification is still shown but labeled as `"New wallet transaction detected. Tap to input details."`, opening a blank Draft Review Card for manual input.
+  * **Notification Permissions Revoked:** If the user revokes "Notification Access" in Android system settings, the app gracefully disables the setting, sets `enable_wallet_interceptor = false` in the database, and displays a subtle banner on the profile screen to re-enable it.
 
 ---

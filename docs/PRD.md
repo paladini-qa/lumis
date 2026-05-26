@@ -33,6 +33,12 @@ Here is a clean, structured PRD (Product Requirements Document) based on the doc
 * **Lumis AI Chatbot:** Context-aware financial co-pilot powered by Gemini AI.
 * **Smart Input:** Seamlessly log transactions via natural language, voice notes (recorded on-device), or receipt photos. Handled securely by sending files directly to Gemini via a Supabase Edge Function to parse and return structured JSON.
 
+### Epic 5: Automated Capture (Google Wallet Interceptor) 📲
+
+* **Google Wallet Interceptor:** Background service on Android that intercepts incoming system notifications from Google Wallet (or Google Play Services) for real-time transactions.
+* **Notification Capture & Parsing:** Local regex parsing running inside a native Android notification listener service to instantly extract the transaction amount, merchant name, and timestamp.
+* **Lumis Draft Alerts:** Triggers a local push notification alerting the user to review and log the caught transaction. Tapping the notification deep-links to a pre-populated Draft Review Card inside the app.
+
 ## 3. UX & Interface Requirements 🎨
 
 * **Responsiveness:** Mobile-first responsive web and native Android/iOS experience built with NativeWind. Includes native gestures (pull-to-refresh, swipe-to-delete) and custom tab bars.
@@ -57,7 +63,7 @@ Key tables in the Supabase instance:
 * `payment_methods`: Details for different cards and payment modes (id, user_id, name, type ['debit', 'credit'], closure_day [for credit], due_day [for credit], icon, color).
 * `categories`: First-class user-created categories (id, user_id, name, color, icon).
 * `transactions`: Core details (id, user_id, payment_method_id, category_id, amount, date, description, payment_status, is_recurring, installment_id, statement_month).
-* `user_settings`: User configuration, custom preferences (theme, friends list), and the user's single `primary_balance` (liquid checking balance).
+* `user_settings`: User configuration, custom preferences (theme, friends list, `enable_wallet_interceptor` toggle), and the user's single `primary_balance` (liquid checking balance).
 * `goals`: Target savings objectives (saving progress subtracts from the primary balance when contributed).
 * `tags`: Custom labels linking to transactions.
 

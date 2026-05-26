@@ -104,3 +104,16 @@ Once you finish a coding, configuration, or structural task:
   - [ ] Edge Function multimodal base64 parse schema (Receipt image / Voice note)
   - [ ] Spring-bounce slide-up **Draft Review Card**
   - [ ] Review edits and "Confirm Log" save transition
+
+### 7. Epic 5: Automated Capture (Google Wallet Interceptor)
+- [ ] **Android Native Notification Listener Bridge:**
+  - [ ] Configure custom native Android module / bridge for `NotificationListenerService`
+  - [ ] Configure package filters for `com.google.android.apps.wallet` and `com.google.android.gms`
+  - [ ] Implement system-wide permission request flow for "Notification Access"
+- [ ] **Local Parse & Action Pipeline:**
+  - [ ] Create robust regex parsing utility for Google Wallet (BRL transaction text formatting)
+  - [ ] Configure local push notification trigger via `expo-notifications` on background match
+  - [ ] Integrate deep linking navigation flow from notification click to Draft Review modal
+- [ ] **Review Card & Settings Settings:**
+  - [ ] Build glassmorphic Draft Review modal component with quick categories/tags select
+  - [ ] Integrate `enable_wallet_interceptor` toggle in user settings menu and database sync
