@@ -45,14 +45,14 @@ Once you finish a coding, configuration, or structural task:
 - [x] Configure GitHub Actions workflow for **automated Supabase CLI migration push**
 
 ### 2. Supabase Database Schema & Migrations
-- [ ] Create migration script for `payment_methods` table & RLS policies
-- [ ] Create migration script for `categories` table & RLS policies
-- [ ] Create migration script for `goals` table & RLS policies
-- [ ] Create migration script for `transactions` table & RLS policies
-- [ ] Create migration script for `user_settings` table & RLS policies
-- [ ] Create migration script for `tags` & `transaction_tags` junction table & RLS policies
-- [ ] Execute database migration index optimizations (`idx_transactions_user_statement`, etc.)
-- [ ] Verify local database schema resets (`supabase db reset`) successfully apply
+- [x] Create migration script for `payment_methods` table & RLS policies
+- [x] Create migration script for `categories` table & RLS policies
+- [x] Create migration script for `goals` table & RLS policies
+- [x] Create migration script for `transactions` table & RLS policies
+- [x] Create migration script for `user_settings` table & RLS policies
+- [x] Create migration script for `tags` & `transaction_tags` junction table & RLS policies
+- [x] Execute database migration index optimizations (`idx_transactions_user_statement`, etc.)
+- [x] Verify local database schema resets (`supabase db reset`) successfully apply
 
 ### 3. Epic 1: Financial Management & Transactions
 - [ ] **Dashboard Hub UI:**
