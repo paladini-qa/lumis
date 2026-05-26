@@ -1,0 +1,23 @@
+name: Database Schema Migration
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-migrations:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Run database migrations push
+        run: |
+          supabase db push --db-url "${{ secrets.SUPABASE_DB_URL }}"
