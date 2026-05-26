@@ -11,6 +11,16 @@ export interface Category {
   icon?: string | null;
 }
 
+export interface WalletDraft {
+  id: string;
+  amount: number;
+  date: Date;
+  description: string;
+  paymentMethodSuggested: 'debit' | 'credit';
+  notes?: string | null;
+  createdAt: Date;
+}
+
 interface AddTransactionInput {
   userId: string;
   paymentMethodId: string;
@@ -34,9 +44,15 @@ interface FinanceState {
   transactions: Transaction[];
   paymentMethods: PaymentMethod[];
   categories: Category[];
+  enableWalletInterceptor: boolean;
+  walletDrafts: WalletDraft[];
   togglePrivacy: () => void;
   setPrimaryBalance: (balance: number) => void;
   addTransaction: (input: AddTransactionInput) => void;
+  setEnableWalletInterceptor: (enabled: boolean) => void;
+  addWalletDraft: (input: Omit<WalletDraft, 'id' | 'createdAt'>) => void;
+  removeWalletDraft: (id: string) => void;
+  clearWalletDrafts: () => void;
   reset: () => void;
 }
 
@@ -142,6 +158,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   transactions: getMockTransactions(),
   paymentMethods: getMockPaymentMethods(),
   categories: getMockCategories(),
+  enableWalletInterceptor: false,
+  walletDrafts: [],
   
   togglePrivacy: () => set((state) => ({ isPrivate: !state.isPrivate })),
   
@@ -180,11 +198,30 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     };
   }),
 
+  setEnableWalletInterceptor: (enabled: boolean) => set({ enableWalletInterceptor: enabled }),
+
+  addWalletDraft: (input) => set((state) => {
+    const draft: WalletDraft = {
+      ...input,
+      id: Math.random().toString(36).substring(2, 11),
+      createdAt: new Date(),
+    };
+    return { walletDrafts: [...state.walletDrafts, draft] };
+  }),
+
+  removeWalletDraft: (id) => set((state) => ({
+    walletDrafts: state.walletDrafts.filter((d) => d.id !== id),
+  })),
+
+  clearWalletDrafts: () => set({ walletDrafts: [] }),
+
   reset: () => set({
     primaryBalance: INITIAL_BALANCE,
     isPrivate: false,
     transactions: getMockTransactions(),
     paymentMethods: getMockPaymentMethods(),
     categories: getMockCategories(),
+    enableWalletInterceptor: false,
+    walletDrafts: [],
   }),
 }));
