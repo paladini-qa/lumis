@@ -114,8 +114,8 @@ Once you finish a coding, configuration, or structural task:
   - [x] Create robust regex parsing utility for Google Wallet (BRL transaction text formatting)
   - [ ] Configure local push notification trigger via `expo-notifications` on background match
   - [ ] Integrate deep linking navigation flow from notification click to Draft Review modal
-- [/ ] **Review Card & Settings Settings:**
-  - [ ] Build glassmorphic Draft Review modal component with quick categories/tags select
+- [x] **Review Card & Settings Settings:**
+  - [x] Build glassmorphic Draft Review modal component with quick categories/tags select
   - [x] Create PostgreSQL database schema migration for `enable_wallet_interceptor` setting
   - [x] Implement `enableWalletInterceptor` and `walletDrafts` Zustand state store management and tests
-  - [ ] Integrate toggle switcher in UI settings menu and synchronize with database
+  - [x] Integrate toggle switcher in UI settings menu and synchronize with database
