@@ -57,8 +57,8 @@ Once you finish a coding, configuration, or structural task:
 ### 3. Epic 1: Financial Management & Transactions
 - [ ] **Dashboard Hub UI:**
   - [ ] Main screen layout (Nubank style) with dynamic primary balance
-  - [ ] Floating frosted-glass balance card with Reanimated 3D tilt effects
-  - [ ] Privacy Mode toggle (smooth 200ms glassmorphic blur animation)
+  - [x] Floating frosted-glass balance card with Reanimated 3D tilt effects
+  - [x] Privacy Mode toggle (smooth 200ms glassmorphic blur animation)
 - [ ] **Core Transactions CRUD:**
   - [ ] Transaction creation forms (Income vs. Expense explicit toggle)
   - [ ] Payment Method and Category assignment dropdowns
