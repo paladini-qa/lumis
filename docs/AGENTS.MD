@@ -39,10 +39,10 @@ Once you finish a coding, configuration, or structural task:
 ### 1. Infrastructure & CI/CD Pipeline
 - [x] Initialize Expo (React Native & Web) Project with TypeScript 5.8+
 - [x] Configure NativeWind (Tailwind CSS) & Tailwind Config
-- [ ] Initialize Supabase Config (`supabase init`)
-- [ ] Configure GitHub Actions workflow for static **GitHub Pages Web Deploy**
-- [ ] Configure GitHub Actions workflow for **automated Gradle Release APK compilation**
-- [ ] Configure GitHub Actions workflow for **automated Supabase CLI migration push**
+- [x] Initialize Supabase Config (`supabase init`)
+- [x] Configure GitHub Actions workflow for static **GitHub Pages Web Deploy**
+- [x] Configure GitHub Actions workflow for **automated Gradle Release APK compilation**
+- [x] Configure GitHub Actions workflow for **automated Supabase CLI migration push**
 
 ### 2. Supabase Database Schema & Migrations
 - [ ] Create migration script for `payment_methods` table & RLS policies
