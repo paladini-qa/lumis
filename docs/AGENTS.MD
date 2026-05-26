@@ -26,11 +26,53 @@ Lumis is built using strict Test-Driven Development. You **MUST** write all code
 * **🟢 Step 2: Write Minimal Production Code (GREEN):** Write the simplest, cleanest production code required to satisfy the test specifications. Run the test suite to verify the test successfully passes.
 * **🔵 Step 3: Refactor & Clean:** Clean up the codebase. Eliminate code duplication, enforce Clean Architecture standards, optimize styles, and refactor code elements while verifying that the entire test suite remains securely green.
 
-### 4. Handoff Routine (After completing any task)
+### 4. Behavior-Driven End-to-End (E2E) Testing Protocol (Playwright)
+
+To guarantee consistent behavior across our hybrid Web and Mobile layouts, you **MUST** author End-to-End (E2E) test specifications using Playwright. 
+
+#### E2E Testing Workflow steps in Gherkin format:
+
+```gherkin
+Feature: Automated End-to-End Testing Workflow
+  As an AI Coding Agent
+  I want to define, implement, and verify Playwright E2E tests for Web and Mobile platforms
+  So that all user-facing interactions are completely robust and regression-free
+
+  Scenario: Setting Up E2E Test Specifications
+    Given the codebase has a new feature or user interaction added
+    When I configure Playwright for both web viewports (desktop Chrome/Safari) and emulated mobile devices (Pixel, iPhone)
+    Then I must create a clean `.spec.ts` test file in the `e2e` directory
+
+  Scenario: Writing the E2E Tests in BDD format
+    Given I am ready to author E2E test assertions
+    When I define test scenarios using Gherkin syntax step-by-step
+      And I implement Playwright selectors using resilient locator strategies (such as test IDs or role names)
+    Then the test must cover:
+      | Platform | Screen Size      | Crucial Assertions                                |
+      | Web      | Desktop (1280px) | Hover animations, side drawers, grid structures   |
+      | Mobile   | Mobile (375px)   | Gesture drags, pull-refresh, bottom bar locks     |
+
+  Scenario: Running and Verifying E2E Tests
+    Given the Playwright E2E test suites are fully implemented
+    When I execute the Playwright command line runner:
+      """
+      npx playwright test
+      """
+    Then all tests must execute and resolve successfully
+      And a Playwright HTML report must be generated for visual trace debugging
+```
+
+#### Playwright Selector & Device Rules:
+1. **Resilient Locators**: Always prefer `testID` or `role`/`label` locators over brittle CSS classes (e.g., use `page.getByTestId('wallet-interceptor-toggle')` instead of `.surface.rounded-full`).
+2. **Mobile Emulation**: Always configure and run the tests against two distinct viewports in `playwright.config.ts`:
+   * **Web/Desktop**: Chrome (1280x720) viewport.
+   * **Mobile**: Mobile Safari/Chrome (375x667 emulated viewport with touch events enabled).
+
+### 5. Handoff Routine (After completing any task)
 Once you finish a coding, configuration, or structural task:
-1. **Verify via Tests:** Run the full Jest test suite to ensure 100% passes and no regressions are introduced.
-2. **Update the Living Checklist:** Mark the completed database fields, features, or deployment tasks in the sections below as `[x]`. 
-3. **Write a Handoff Summary:** Provide a concise summary of what was completed and what the next agent should focus on.
+1. **Verify via Tests**: Run the full Jest unit/integration test suite and the Playwright E2E test suite to ensure 100% passes and no regressions are introduced.
+2. **Update the Living Checklist**: Mark the completed database fields, features, or deployment tasks in the sections below as `[x]`. 
+3. **Write a Handoff Summary**: Provide a concise summary of what was completed and what the next agent should focus on.
 
 ---
 
