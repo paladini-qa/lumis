@@ -1,23 +1,96 @@
 import { create } from 'zustand';
 import { Transaction } from '../../domain/entities/Transaction';
+import { PaymentMethod } from '../../domain/entities/PaymentMethod';
+import { calculateStatementMonth } from '../use-cases/CalculateStatementMonth';
+
+export interface Category {
+  id: string;
+  userId: string;
+  name: string;
+  color: string;
+  icon?: string | null;
+}
+
+interface AddTransactionInput {
+  userId: string;
+  paymentMethodId: string;
+  categoryId?: string | null;
+  goalId?: string | null;
+  amount: number;
+  type: 'income' | 'expense' | 'transfer';
+  date: Date;
+  description: string;
+  paymentStatus: 'paid' | 'pending';
+  notes?: string | null;
+  isRecurring?: boolean;
+  installmentId?: string | null;
+  installmentNumber?: number | null;
+  totalInstallments?: number | null;
+}
 
 interface FinanceState {
   primaryBalance: number;
   isPrivate: boolean;
   transactions: Transaction[];
+  paymentMethods: PaymentMethod[];
+  categories: Category[];
   togglePrivacy: () => void;
   setPrimaryBalance: (balance: number) => void;
-  addTransaction: (transaction: Transaction) => void;
+  addTransaction: (input: AddTransactionInput) => void;
   reset: () => void;
 }
 
 const INITIAL_BALANCE = 18450.72;
+
+const getMockPaymentMethods = (): PaymentMethod[] => {
+  return [
+    new PaymentMethod({
+      id: 'pay-debit',
+      userId: 'user-1',
+      name: 'Liquid Cash',
+      type: 'debit',
+      color: '#B9D4A3', // Positive green
+      icon: 'cash-outline',
+    }),
+    new PaymentMethod({
+      id: 'pay-credit-visa',
+      userId: 'user-1',
+      name: 'Visa Gold',
+      type: 'credit',
+      closureDay: 10,
+      dueDay: 20,
+      color: '#E6C687', // Gold
+      icon: 'card-outline',
+    }),
+    new PaymentMethod({
+      id: 'pay-credit-master',
+      userId: 'user-1',
+      name: 'Master Reserve',
+      type: 'credit',
+      closureDay: 15,
+      dueDay: 25,
+      color: '#1C1F24', // Obsidian surface overlay
+      icon: 'card-outline',
+    }),
+  ];
+};
+
+const getMockCategories = (): Category[] => {
+  return [
+    { id: 'cat-groceries', userId: 'user-1', name: 'Groceries', color: '#B9D4A3', icon: 'cart-outline' },
+    { id: 'cat-transport', userId: 'user-1', name: 'Transport', color: '#C9A961', icon: 'car-outline' },
+    { id: 'cat-utilities', userId: 'user-1', name: 'Utilities', color: '#E09B87', icon: 'home-outline' },
+    { id: 'cat-salary', userId: 'user-1', name: 'Salary', color: '#F5EFE0', icon: 'briefcase-outline' },
+    { id: 'cat-leisure', userId: 'user-1', name: 'Leisure', color: '#F3D99A', icon: 'wine-outline' },
+  ];
+};
 
 const getMockTransactions = (): Transaction[] => {
   return [
     new Transaction({
       userId: 'user-1',
       paymentMethodId: 'pay-debit',
+      categoryId: 'cat-salary',
       amount: 20000.00,
       type: 'income',
       date: new Date('2026-05-01'),
@@ -29,6 +102,7 @@ const getMockTransactions = (): Transaction[] => {
     new Transaction({
       userId: 'user-1',
       paymentMethodId: 'pay-credit-visa',
+      categoryId: 'cat-leisure',
       amount: 350.00,
       type: 'expense',
       date: new Date('2026-05-10'),
@@ -39,6 +113,7 @@ const getMockTransactions = (): Transaction[] => {
     new Transaction({
       userId: 'user-1',
       paymentMethodId: 'pay-debit',
+      categoryId: 'cat-groceries',
       amount: 48.50,
       type: 'expense',
       date: new Date('2026-05-15'),
@@ -49,6 +124,7 @@ const getMockTransactions = (): Transaction[] => {
     new Transaction({
       userId: 'user-1',
       paymentMethodId: 'pay-credit-master',
+      categoryId: 'cat-leisure',
       amount: 1150.78,
       type: 'expense',
       date: new Date('2026-05-20'),
@@ -60,23 +136,41 @@ const getMockTransactions = (): Transaction[] => {
   ];
 };
 
-export const useFinanceStore = create<FinanceState>((set) => ({
+export const useFinanceStore = create<FinanceState>((set, get) => ({
   primaryBalance: INITIAL_BALANCE,
   isPrivate: false,
   transactions: getMockTransactions(),
+  paymentMethods: getMockPaymentMethods(),
+  categories: getMockCategories(),
   
   togglePrivacy: () => set((state) => ({ isPrivate: !state.isPrivate })),
   
   setPrimaryBalance: (balance: number) => set({ primaryBalance: balance }),
   
-  addTransaction: (transaction: Transaction) => set((state) => {
+  addTransaction: (input: AddTransactionInput) => set((state) => {
+    // Find payment method to calculate statement month automatically
+    const paymentMethod = state.paymentMethods.find((p) => p.id === input.paymentMethodId);
+    if (!paymentMethod) {
+      throw new Error(`Payment method with ID ${input.paymentMethodId} not found`);
+    }
+
+    const calculatedStatementMonth = calculateStatementMonth(
+      input.date,
+      paymentMethod.type,
+      paymentMethod.closureDay ?? undefined
+    );
+
+    const transaction = new Transaction({
+      ...input,
+      statementMonth: calculatedStatementMonth,
+    });
+
     let balanceChange = 0;
     if (transaction.type === 'income') {
       balanceChange = transaction.amount;
     } else if (transaction.type === 'expense') {
       balanceChange = -transaction.amount;
     } else if (transaction.type === 'transfer') {
-      // Per specs, transferring/contributing to a savings goal reduces the primary balance
       balanceChange = -transaction.amount;
     }
     
@@ -90,5 +184,7 @@ export const useFinanceStore = create<FinanceState>((set) => ({
     primaryBalance: INITIAL_BALANCE,
     isPrivate: false,
     transactions: getMockTransactions(),
+    paymentMethods: getMockPaymentMethods(),
+    categories: getMockCategories(),
   }),
 }));

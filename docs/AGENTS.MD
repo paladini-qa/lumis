@@ -59,11 +59,11 @@ Once you finish a coding, configuration, or structural task:
   - [x] Main screen layout (Nubank style) with dynamic primary balance
   - [x] Floating frosted-glass balance card with Reanimated 3D tilt effects
   - [x] Privacy Mode toggle (smooth 200ms glassmorphic blur animation)
-- [ ] **Core Transactions CRUD:**
-  - [ ] Transaction creation forms (Income vs. Expense explicit toggle)
-  - [ ] Payment Method and Category assignment dropdowns
-  - [ ] Calculated `statement_month` assignment logic integration
-  - [ ] Search, filter, and date scroll lists
+- [x] **Core Transactions CRUD:**
+  - [x] Transaction creation forms (Income vs. Expense explicit toggle)
+  - [x] Payment Method and Category assignment dropdowns
+  - [x] Calculated `statement_month` assignment logic integration
+  - [x] Search, filter, and date scroll lists
 - [ ] **Complex Transactions:**
   - [ ] Installment calculations and series logging logic
   - [ ] Recurring subscription logging (Netflix-style)
