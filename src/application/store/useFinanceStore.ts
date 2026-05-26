@@ -225,3 +225,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     walletDrafts: [],
   }),
 }));
+
+if (typeof window !== 'undefined') {
+  (window as any).useFinanceStore = useFinanceStore;
+}
