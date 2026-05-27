@@ -54,7 +54,7 @@ test.describe('Lumis Google Wallet Interceptor E2E Flow', () => {
     await page.evaluate(() => {
       window.useFinanceStore.getState().addWalletDraft({
         amount: 29.90,
-        date: new Date('2026-05-26'),
+        date: new Date('2026-05-05'),
         description: 'Starbucks Coffee',
         paymentMethodSuggested: 'credit',
         notes: 'E2E Intercept Match',
