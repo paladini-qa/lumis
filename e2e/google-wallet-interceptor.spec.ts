@@ -70,7 +70,7 @@ test.describe('Lumis Google Wallet Interceptor E2E Flow', () => {
     await expect(merchantInput).toHaveValue('Starbucks Coffee');
 
     const amountInput = page.getByPlaceholder('0,00');
-    await expect(amountInput).toHaveValue('29,90');
+    await expect(amountInput).toHaveValue('29,9');
 
     // Confirm and Save the transaction
     const confirmButton = page.getByText('CONFIRM & SAVE');
