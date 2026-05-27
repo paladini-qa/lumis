@@ -82,7 +82,7 @@ Once you finish a coding, configuration, or structural task:
 - [x] Initialize Expo (React Native & Web) Project with TypeScript 5.8+
 - [x] Configure NativeWind (Tailwind CSS) & Tailwind Config
 - [x] Initialize Supabase Config (`supabase init`)
-- [x] Configure GitHub Actions workflow for static **GitHub Pages Web Deploy**
+- [x] Configure GitHub Actions workflow for static **GitHub Pages Web Deploy** & **Playwright E2E Integration**
 - [x] Configure GitHub Actions workflow for **automated Gradle Release APK compilation**
 - [x] Configure GitHub Actions workflow for **automated Supabase CLI migration push**
 - [x] Initialize Playwright E2E testing framework and configure desktop/mobile viewports
