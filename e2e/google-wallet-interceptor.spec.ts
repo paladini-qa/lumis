@@ -7,7 +7,7 @@ test.describe('Lumis Google Wallet Interceptor E2E Flow', () => {
     await page.goto('/');
     
     // Wait for the app main elements to load
-    await expect(page.getByText('LUMIS')).toBeVisible();
+    await expect(page.getByText('LUMIS', { exact: true })).toBeVisible();
     
     // Reset store before starting
     await page.evaluate(() => {
