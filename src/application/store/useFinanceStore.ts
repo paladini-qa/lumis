@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Transaction } from '../../domain/entities/Transaction';
 import { PaymentMethod } from '../../domain/entities/PaymentMethod';
 import { calculateStatementMonth } from '../use-cases/CalculateStatementMonth';
+import { supabase } from '../../infrastructure/supabase';
 
 export interface Category {
   id: string;
@@ -65,7 +66,7 @@ export interface AutoCategoryRule {
 }
 
 interface AddTransactionInput {
-  userId: string;
+  userId?: string;
   paymentMethodId: string;
   categoryId?: string | null;
   goalId?: string | null;
@@ -79,8 +80,8 @@ interface AddTransactionInput {
   installmentId?: string | null;
   installmentNumber?: number | null;
   totalInstallments?: number | null;
-  tags?: string[]; // Custom tags
-  splitWithFriend?: string | null; // Friend's name for 50/50 split
+  tags?: string[];
+  splitWithFriend?: string | null;
 }
 
 interface FinanceState {
@@ -97,30 +98,41 @@ interface FinanceState {
   enableWalletInterceptor: boolean;
   walletDrafts: WalletDraft[];
 
+  // Auth State
+  user: any | null;
+  session: any | null;
+  loadingAuth: boolean;
+
+  initializeAuth: () => void;
+  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  loadUserData: () => Promise<void>;
+
   togglePrivacy: () => void;
-  setPrimaryBalance: (balance: number) => void;
-  addTransaction: (input: AddTransactionInput) => void;
-  deleteTransaction: (id: string | undefined) => void;
+  setPrimaryBalance: (balance: number) => Promise<void>;
+  addTransaction: (input: AddTransactionInput) => Promise<void>;
+  deleteTransaction: (id: string | undefined) => Promise<void>;
   editTransactionException: (id: string, type: 'this' | 'future' | 'all', updatedFields: Partial<AddTransactionInput>) => void;
   
   // Payment Methods
-  addPaymentMethod: (pm: Omit<PaymentMethod, 'id'>) => void;
-  deletePaymentMethod: (id: string) => void;
+  addPaymentMethod: (pm: Omit<PaymentMethod, 'id'>) => Promise<void>;
+  deletePaymentMethod: (id: string) => Promise<void>;
   
   // Categories & Tags
-  addCategory: (cat: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: string) => void;
-  addTag: (name: string) => void;
+  addCategory: (cat: Omit<Category, 'id'>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addTag: (name: string) => Promise<void>;
   addAutoCategoryRule: (substring: string, categoryId: string) => void;
   deleteAutoCategoryRule: (id: string) => void;
 
   // Goals
-  addGoal: (goal: Omit<Goal, 'id' | 'currentSavings' | 'createdAt'>) => void;
-  contributeToGoal: (id: string, amount: number) => void;
-  deleteGoal: (id: string) => void;
+  addGoal: (goal: Omit<Goal, 'id' | 'currentSavings' | 'createdAt'>) => Promise<void>;
+  contributeToGoal: (id: string, amount: number) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
 
   // Google Wallet
-  setEnableWalletInterceptor: (enabled: boolean) => void;
+  setEnableWalletInterceptor: (enabled: boolean) => Promise<void>;
   addWalletDraft: (input: Omit<WalletDraft, 'id' | 'createdAt'>) => void;
   removeWalletDraft: (id: string) => void;
   clearWalletDrafts: () => void;
@@ -282,17 +294,384 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   enableWalletInterceptor: false,
   walletDrafts: [],
 
+  // Auth Initial State
+  user: null,
+  session: null,
+  loadingAuth: true,
+
+  initializeAuth: () => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        set({ session, user: session.user, loadingAuth: false });
+        get().loadUserData();
+      } else {
+        set({ session: null, user: null, loadingAuth: false });
+      }
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        set({ session, user: session.user, loadingAuth: false });
+        get().loadUserData();
+      } else {
+        set({ session: null, user: null, loadingAuth: false });
+        get().reset(); // Reset to guest state on logout
+      }
+    });
+  },
+
+  signUp: async (email, password) => {
+    set({ loadingAuth: true });
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      set({ loadingAuth: false });
+      throw error;
+    }
+    if (data.session) {
+      set({ session: data.session, user: data.session.user, loadingAuth: false });
+      await get().loadUserData();
+    } else {
+      set({ loadingAuth: false });
+    }
+  },
+
+  signIn: async (email, password) => {
+    set({ loadingAuth: true });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      set({ loadingAuth: false });
+      throw error;
+    }
+    set({ session: data.session, user: data.user, loadingAuth: false });
+    await get().loadUserData();
+  },
+
+  signOut: async () => {
+    set({ loadingAuth: true });
+    await supabase.auth.signOut();
+  },
+
+  loadUserData: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    try {
+      // 1. Fetch User Settings
+      const { data: settings, error: settingsErr } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (settingsErr) throw settingsErr;
+
+      let primaryBalance = INITIAL_BALANCE;
+      let enableWalletInterceptor = false;
+      let friendsList = getMockFriends();
+
+      if (settings) {
+        primaryBalance = parseFloat(settings.primary_balance);
+        enableWalletInterceptor = settings.enable_wallet_interceptor;
+        friendsList = settings.friends_list || [];
+      } else {
+        // Create initial settings if not exists
+        await supabase
+          .from('user_settings')
+          .insert({
+            user_id: user.id,
+            primary_balance: INITIAL_BALANCE,
+            enable_wallet_interceptor: false,
+            friends_list: friendsList,
+          });
+      }
+
+      // 2. Fetch Payment Methods
+      const { data: pmData, error: pmErr } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (pmErr) throw pmErr;
+
+      let paymentMethods: PaymentMethod[] = [];
+      if (pmData && pmData.length > 0) {
+        paymentMethods = pmData.map(
+          (pm) =>
+            new PaymentMethod({
+              id: pm.id,
+              userId: pm.user_id,
+              name: pm.name,
+              type: pm.type as 'debit' | 'credit',
+              closureDay: pm.closure_day,
+              dueDay: pm.due_day,
+              icon: pm.icon,
+              color: pm.color,
+            })
+        );
+      } else {
+        // Populate defaults
+        const defaults = getMockPaymentMethods();
+        for (const item of defaults) {
+          const { data: inserted, error: insertErr } = await supabase
+            .from('payment_methods')
+            .insert({
+              user_id: user.id,
+              name: item.name,
+              type: item.type,
+              closure_day: item.closureDay || null,
+              due_day: item.dueDay || null,
+              icon: item.icon || null,
+              color: item.color,
+            })
+            .select()
+            .single();
+
+          if (!insertErr && inserted) {
+            paymentMethods.push(
+              new PaymentMethod({
+                id: inserted.id,
+                userId: inserted.user_id,
+                name: inserted.name,
+                type: inserted.type as 'debit' | 'credit',
+                closureDay: inserted.closure_day,
+                dueDay: inserted.due_day,
+                icon: inserted.icon,
+                color: inserted.color,
+              })
+            );
+          }
+        }
+      }
+
+      // 3. Fetch Categories
+      const { data: catData, error: catErr } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (catErr) throw catErr;
+
+      let categories: Category[] = [];
+      if (catData && catData.length > 0) {
+        categories = catData.map((cat) => ({
+          id: cat.id,
+          userId: cat.user_id,
+          name: cat.name,
+          color: cat.color,
+          icon: cat.icon,
+        }));
+      } else {
+        // Populate defaults
+        const defaults = getMockCategories();
+        for (const item of defaults) {
+          const { data: inserted, error: insertErr } = await supabase
+            .from('categories')
+            .insert({
+              user_id: user.id,
+              name: item.name,
+              color: item.color,
+              icon: item.icon || null,
+            })
+            .select()
+            .single();
+
+          if (!insertErr && inserted) {
+            categories.push({
+              id: inserted.id,
+              userId: inserted.user_id,
+              name: inserted.name,
+              color: inserted.color,
+              icon: inserted.icon,
+            });
+          }
+        }
+      }
+
+      // 4. Fetch Goals
+      const { data: goalData, error: goalErr } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (goalErr) throw goalErr;
+
+      let goals: Goal[] = [];
+      if (goalData && goalData.length > 0) {
+        goals = goalData.map((g) => ({
+          id: g.id,
+          userId: g.user_id,
+          name: g.name,
+          targetAmount: parseFloat(g.target_amount),
+          currentSavings: parseFloat(g.current_savings),
+          deadline: g.deadline ? new Date(g.deadline) : null,
+          color: g.color,
+          icon: g.icon,
+          createdAt: new Date(g.created_at),
+        }));
+      } else {
+        // Populate defaults
+        const defaults = getMockGoals();
+        for (const item of defaults) {
+          const { data: inserted, error: insertErr } = await supabase
+            .from('goals')
+            .insert({
+              user_id: user.id,
+              name: item.name,
+              target_amount: item.targetAmount,
+              current_savings: item.currentSavings,
+              deadline: item.deadline ? item.deadline.toISOString().slice(0, 10) : null,
+              color: item.color,
+              icon: item.icon || null,
+            })
+            .select()
+            .single();
+
+          if (!insertErr && inserted) {
+            goals.push({
+              id: inserted.id,
+              userId: inserted.user_id,
+              name: inserted.name,
+              targetAmount: parseFloat(inserted.target_amount),
+              currentSavings: parseFloat(inserted.current_savings),
+              deadline: inserted.deadline ? new Date(inserted.deadline) : null,
+              color: inserted.color,
+              icon: inserted.icon,
+              createdAt: new Date(inserted.created_at),
+            });
+          }
+        }
+      }
+
+      // 5. Fetch Transactions
+      const { data: txData, error: txErr } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (txErr) throw txErr;
+
+      let transactions: Transaction[] = [];
+      if (txData && txData.length > 0) {
+        transactions = txData.map(
+          (t) =>
+            new Transaction({
+              id: t.id,
+              userId: t.user_id,
+              paymentMethodId: t.payment_method_id,
+              categoryId: t.category_id,
+              goalId: t.goal_id,
+              amount: parseFloat(t.amount),
+              type: t.type as 'income' | 'expense' | 'transfer',
+              date: new Date(t.date),
+              description: t.description,
+              paymentStatus: t.payment_status as 'paid' | 'pending',
+              isRecurring: t.is_recurring,
+              installmentId: t.installment_id,
+              installmentNumber: t.installment_number,
+              totalInstallments: t.total_installments,
+              statementMonth: new Date(t.statement_month),
+              notes: t.notes,
+            })
+        );
+      } else {
+        // Populate defaults
+        const defaults = getMockTransactions();
+        for (const item of defaults) {
+          const matchPm = paymentMethods.find((p) => p.name === (item.paymentMethodId === 'pay-debit' ? 'Liquid Cash' : item.paymentMethodId === 'pay-credit-visa' ? 'Visa Gold' : 'Master Reserve'));
+          const matchCat = categories.find((c) => c.name === (item.categoryId === 'cat-salary' ? 'Salary' : item.categoryId === 'cat-leisure' ? 'Leisure' : 'Groceries'));
+
+          if (matchPm) {
+            const { data: inserted, error: insertErr } = await supabase
+              .from('transactions')
+              .insert({
+                user_id: user.id,
+                payment_method_id: matchPm.id!,
+                category_id: matchCat?.id || null,
+                amount: item.amount,
+                type: item.type,
+                date: item.date.toISOString().slice(0, 10),
+                description: item.description,
+                payment_status: item.paymentStatus,
+                statement_month: item.statementMonth.toISOString().slice(0, 10),
+                notes: item.notes || null,
+              })
+              .select()
+              .single();
+
+            if (!insertErr && inserted) {
+              transactions.push(
+                new Transaction({
+                  id: inserted.id,
+                  userId: inserted.user_id,
+                  paymentMethodId: inserted.payment_method_id,
+                  categoryId: inserted.category_id,
+                  amount: parseFloat(inserted.amount),
+                  type: inserted.type as 'income' | 'expense' | 'transfer',
+                  date: new Date(inserted.date),
+                  description: inserted.description,
+                  paymentStatus: inserted.payment_status as 'paid' | 'pending',
+                  statementMonth: new Date(inserted.statement_month),
+                  notes: inserted.notes,
+                })
+              );
+            }
+          }
+        }
+      }
+
+      // 6. Fetch Tags
+      const { data: tagData, error: tagErr } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', user.id);
+
+      let tags: Tag[] = [];
+      if (!tagErr && tagData) {
+        tags = tagData.map((t) => ({ id: t.id, userId: t.user_id, name: t.name }));
+      }
+
+      set({
+        primaryBalance,
+        enableWalletInterceptor,
+        friendsList,
+        paymentMethods,
+        categories,
+        goals,
+        transactions,
+        tags,
+      });
+
+    } catch (err: any) {
+      console.error('Failed to load user data from Supabase:', err);
+    }
+  },
+
   togglePrivacy: () => set((state) => ({ isPrivate: !state.isPrivate })),
 
-  setPrimaryBalance: (balance: number) => set({ primaryBalance: balance }),
+  setPrimaryBalance: async (balance: number) => {
+    const { user } = get();
+    if (user) {
+      try {
+        await supabase
+          .from('user_settings')
+          .update({ primary_balance: balance })
+          .eq('user_id', user.id);
+      } catch (err) {
+        console.error('Failed to update balance in Supabase:', err);
+      }
+    }
+    set({ primaryBalance: balance });
+  },
 
-  addTransaction: (input: AddTransactionInput) => set((state) => {
+  addTransaction: async (input: AddTransactionInput) => {
+    const state = get();
+    const { user } = state;
+
     const paymentMethod = state.paymentMethods.find((p) => p.id === input.paymentMethodId);
     if (!paymentMethod) {
       throw new Error(`Payment method with ID ${input.paymentMethodId} not found`);
     }
 
-    // Apply auto-categorization substring rule if no category is provided
     let finalCategoryId = input.categoryId;
     if (!finalCategoryId && input.description) {
       const match = state.autoCategoryRules.find(
@@ -309,7 +688,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       paymentMethod.closureDay ?? undefined
     );
 
-    // If it is an installment series
     const isInstallmentSeries = input.totalInstallments && input.totalInstallments > 1;
     const transactionsToAdd: Transaction[] = [];
     const installmentId = isInstallmentSeries ? (input.installmentId || Math.random().toString(36).substring(2, 11)) : null;
@@ -346,7 +724,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
         transactionsToAdd.push(transaction);
 
-        // Deduct expense immediately to match existing integration test expectations
         if (transaction.type === 'income') {
           balanceChange += transaction.amount;
         } else if (transaction.type === 'expense' || transaction.type === 'transfer') {
@@ -369,7 +746,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       }
     }
 
-    // Hybrid Splits logic
     let updatedFriends = [...state.friendsList];
     let updatedDebts = [...state.debts];
 
@@ -380,7 +756,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
       const newDebt: Debt = {
         id: debtId,
-        userId: input.userId,
+        userId: user ? user.id : 'user-1',
         friendName,
         amount: splitAmount,
         description: `Split expense: ${input.description}`,
@@ -391,7 +767,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
       updatedDebts.push(newDebt);
 
-      // Adjust friend balance in our local tracking
       const friendIndex = updatedFriends.findIndex((f) => f.name.toLowerCase() === friendName.toLowerCase());
       if (friendIndex >= 0) {
         updatedFriends[friendIndex] = {
@@ -407,17 +782,91 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       }
     }
 
-    return {
+    if (user) {
+      try {
+        for (const tx of transactionsToAdd) {
+          const { data: insertedTx, error: txErr } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              payment_method_id: tx.paymentMethodId,
+              category_id: tx.categoryId || null,
+              goal_id: tx.goalId || null,
+              amount: tx.amount,
+              type: tx.type,
+              date: tx.date.toISOString().slice(0, 10),
+              description: tx.description,
+              payment_status: tx.paymentStatus,
+              is_recurring: tx.isRecurring || false,
+              installment_id: tx.installmentId || null,
+              installment_number: tx.installmentNumber || null,
+              total_installments: tx.totalInstallments || null,
+              statement_month: tx.statementMonth.toISOString().slice(0, 10),
+              notes: tx.notes || null,
+            })
+            .select()
+            .single();
+
+          if (txErr) throw txErr;
+          if (insertedTx) tx.id = insertedTx.id;
+
+          if (input.tags && input.tags.length > 0) {
+            for (const tagName of input.tags) {
+              let { data: tag } = await supabase
+                .from('tags')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('name', tagName)
+                .maybeSingle();
+
+              if (!tag) {
+                const { data: newTag, error: newTagErr } = await supabase
+                  .from('tags')
+                  .insert({ user_id: user.id, name: tagName })
+                  .select()
+                  .single();
+                if (newTagErr) throw newTagErr;
+                tag = newTag;
+              }
+
+              if (tag) {
+                await supabase
+                  .from('transaction_tags')
+                  .insert({ transaction_id: tx.id, tag_id: tag.id });
+              }
+            }
+          }
+        }
+
+        const newBalance = state.primaryBalance + balanceChange;
+        await supabase
+          .from('user_settings')
+          .update({ 
+            primary_balance: newBalance,
+            friends_list: updatedFriends
+          })
+          .eq('user_id', user.id);
+
+      } catch (err) {
+        console.error('Failed to sync transaction with Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({
       transactions: [...state.transactions, ...transactionsToAdd],
       primaryBalance: state.primaryBalance + balanceChange,
       friendsList: updatedFriends,
       debts: updatedDebts,
-    };
-  }),
+    });
+  },
 
-  deleteTransaction: (id) => set((state) => {
-    const transaction = state.transactions.find((t) => t.date.getTime() === (id as any) || t.description === id);
-    if (!transaction) return {};
+  deleteTransaction: async (id) => {
+    const state = get();
+    const { user } = state;
+
+    const transaction = state.transactions.find((t) => t.id === id || t.date.getTime() === (id as any) || t.description === id);
+    if (!transaction) return;
 
     let balanceRestore = 0;
     if (transaction.type === 'income') {
@@ -426,11 +875,29 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       balanceRestore = transaction.amount;
     }
 
-    return {
-      transactions: state.transactions.filter((t) => t !== transaction),
+    if (user) {
+      try {
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', transaction.id);
+
+        const newBalance = state.primaryBalance + balanceRestore;
+        await supabase
+          .from('user_settings')
+          .update({ primary_balance: newBalance })
+          .eq('user_id', user.id);
+      } catch (err) {
+        console.error('Failed to delete transaction in Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({
+      transactions: state.transactions.filter((t) => t.id !== transaction.id),
       primaryBalance: state.primaryBalance + balanceRestore,
-    };
-  }),
+    });
+  },
 
   editTransactionException: (id, type, updatedFields) => set((state) => {
     const index = state.transactions.findIndex((t) => t.installmentId === id || t.description === id);
@@ -440,15 +907,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const target = updatedTransactions[index];
 
     if (type === 'this') {
-      // Modify this instance only: detach it or update its properties
       updatedTransactions[index] = new Transaction({
         ...target,
         ...updatedFields,
         date: updatedFields.date ? new Date(updatedFields.date) : target.date,
-        statementMonth: target.statementMonth, // Keep or recalculate
+        statementMonth: target.statementMonth,
       });
     } else if (type === 'all' || type === 'future') {
-      // Modify all or future occurrences
       const targetInstallmentId = target.installmentId;
       updatedTransactions.forEach((t, i) => {
         if (targetInstallmentId && t.installmentId === targetInstallmentId) {
@@ -456,7 +921,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
             updatedTransactions[i] = new Transaction({
               ...t,
               ...updatedFields,
-              date: t.date, // keep original date
+              date: t.date,
               statementMonth: t.statementMonth,
             });
           }
@@ -467,40 +932,131 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     return { transactions: updatedTransactions };
   }),
 
-  // Payment Methods
-  addPaymentMethod: (pm) => set((state) => {
-    const newPm = new PaymentMethod({
-      ...pm,
-      id: Math.random().toString(36).substring(2, 11),
-    });
-    return { paymentMethods: [...state.paymentMethods, newPm] };
-  }),
+  addPaymentMethod: async (pm) => {
+    const state = get();
+    const { user } = state;
+    let newId = Math.random().toString(36).substring(2, 11);
 
-  deletePaymentMethod: (id) => set((state) => ({
-    paymentMethods: state.paymentMethods.filter((pm) => pm.id !== id),
-  })),
+    if (user) {
+      try {
+        const { data: inserted, error } = await supabase
+          .from('payment_methods')
+          .insert({
+            user_id: user.id,
+            name: pm.name,
+            type: pm.type,
+            closure_day: pm.closureDay || null,
+            due_day: pm.dueDay || null,
+            icon: pm.icon || null,
+            color: pm.color,
+          })
+          .select()
+          .single();
 
-  // Categories & Tags
-  addCategory: (cat) => set((state) => {
-    const newCat: Category = {
-      ...cat,
-      id: Math.random().toString(36).substring(2, 11),
-    };
-    return { categories: [...state.categories, newCat] };
-  }),
+        if (error) throw error;
+        if (inserted) newId = inserted.id;
+      } catch (err) {
+        console.error('Failed to add payment method in Supabase:', err);
+        throw err;
+      }
+    }
 
-  deleteCategory: (id) => set((state) => ({
-    categories: state.categories.filter((cat) => cat.id !== id),
-  })),
+    const newPm = new PaymentMethod({ ...pm, id: newId });
+    set({ paymentMethods: [...state.paymentMethods, newPm] });
+  },
 
-  addTag: (name) => set((state) => {
-    const newTag: Tag = {
-      id: Math.random().toString(36).substring(2, 11),
-      userId: 'user-1',
-      name,
-    };
-    return { tags: [...state.tags, newTag] };
-  }),
+  deletePaymentMethod: async (id) => {
+    const state = get();
+    const { user } = state;
+
+    if (user) {
+      try {
+        await supabase
+          .from('payment_methods')
+          .delete()
+          .eq('id', id);
+      } catch (err) {
+        console.error('Failed to delete payment method in Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({ paymentMethods: state.paymentMethods.filter((pm) => pm.id !== id) });
+  },
+
+  addCategory: async (cat) => {
+    const state = get();
+    const { user } = state;
+    let newId = Math.random().toString(36).substring(2, 11);
+
+    if (user) {
+      try {
+        const { data: inserted, error } = await supabase
+          .from('categories')
+          .insert({
+            user_id: user.id,
+            name: cat.name,
+            color: cat.color,
+            icon: cat.icon || null,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (inserted) newId = inserted.id;
+      } catch (err) {
+        console.error('Failed to add category in Supabase:', err);
+        throw err;
+      }
+    }
+
+    const newCat: Category = { ...cat, id: newId };
+    set({ categories: [...state.categories, newCat] });
+  },
+
+  deleteCategory: async (id) => {
+    const state = get();
+    const { user } = state;
+
+    if (user) {
+      try {
+        await supabase
+          .from('categories')
+          .delete()
+          .eq('id', id);
+      } catch (err) {
+        console.error('Failed to delete category in Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({ categories: state.categories.filter((cat) => cat.id !== id) });
+  },
+
+  addTag: async (name) => {
+    const state = get();
+    const { user } = state;
+    let newId = Math.random().toString(36).substring(2, 11);
+
+    if (user) {
+      try {
+        const { data: inserted, error } = await supabase
+          .from('tags')
+          .insert({ user_id: user.id, name })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (inserted) newId = inserted.id;
+      } catch (err) {
+        console.error('Failed to add tag in Supabase:', err);
+        throw err;
+      }
+    }
+
+    const newTag: Tag = { id: newId, userId: user ? user.id : 'user-1', name };
+    set({ tags: [...state.tags, newTag] });
+  },
 
   addAutoCategoryRule: (substring, categoryId) => set((state) => {
     const newRule: AutoCategoryRule = {
@@ -515,18 +1071,51 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     autoCategoryRules: state.autoCategoryRules.filter((r) => r.id !== id),
   })),
 
-  // Goals
-  addGoal: (goal) => set((state) => {
+  addGoal: async (goal) => {
+    const state = get();
+    const { user } = state;
+    let newId = Math.random().toString(36).substring(2, 11);
+
+    if (user) {
+      try {
+        const { data: inserted, error } = await supabase
+          .from('goals')
+          .insert({
+            user_id: user.id,
+            name: goal.name,
+            target_amount: goal.targetAmount,
+            current_savings: 0,
+            deadline: goal.deadline ? goal.deadline.toISOString().slice(0, 10) : null,
+            color: goal.color,
+            icon: goal.icon || null,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (inserted) newId = inserted.id;
+      } catch (err) {
+        console.error('Failed to add goal in Supabase:', err);
+        throw err;
+      }
+    }
+
     const newGoal: Goal = {
       ...goal,
-      id: Math.random().toString(36).substring(2, 11),
+      id: newId,
       currentSavings: 0,
       createdAt: new Date(),
     };
-    return { goals: [...state.goals, newGoal] };
-  }),
+    set({ goals: [...state.goals, newGoal] });
+  },
 
-  contributeToGoal: (id, amount) => set((state) => {
+  contributeToGoal: async (id, amount) => {
+    const state = get();
+    const { user } = state;
+
+    const targetGoal = state.goals.find((g) => g.id === id);
+    if (!targetGoal) return;
+
     const updatedGoals = state.goals.map((g) => {
       if (g.id === id) {
         return { ...g, currentSavings: g.currentSavings + amount };
@@ -534,20 +1123,19 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       return g;
     });
 
-    // Also deduct from primaryBalance and log a transfer transaction
     const transferPm = state.paymentMethods.find((pm) => pm.type === 'debit');
-    const targetGoal = state.goals.find((g) => g.id === id);
-
     let nextTransactions = [...state.transactions];
-    if (transferPm && targetGoal) {
+    let goalTx: Transaction | null = null;
+
+    if (transferPm) {
       const calculatedStatementMonth = calculateStatementMonth(
         new Date(),
         transferPm.type,
         transferPm.closureDay ?? undefined
       );
 
-      const goalTx = new Transaction({
-        userId: 'user-1',
+      goalTx = new Transaction({
+        userId: user ? user.id : 'user-1',
         paymentMethodId: transferPm.id!,
         goalId: id,
         amount,
@@ -560,19 +1148,83 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       nextTransactions.push(goalTx);
     }
 
-    return {
+    if (user) {
+      try {
+        await supabase
+          .from('goals')
+          .update({ current_savings: targetGoal.currentSavings + amount })
+          .eq('id', id);
+
+        if (goalTx) {
+          await supabase.from('transactions').insert({
+            user_id: user.id,
+            payment_method_id: goalTx.paymentMethodId,
+            goal_id: goalTx.goalId,
+            amount: goalTx.amount,
+            type: goalTx.type,
+            date: goalTx.date.toISOString().slice(0, 10),
+            description: goalTx.description,
+            payment_status: goalTx.paymentStatus,
+            statement_month: goalTx.statementMonth.toISOString().slice(0, 10),
+          });
+        }
+
+        const newBalance = state.primaryBalance - amount;
+        await supabase
+          .from('user_settings')
+          .update({ primary_balance: newBalance })
+          .eq('user_id', user.id);
+
+      } catch (err) {
+        console.error('Failed to contribute to goal in Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({
       goals: updatedGoals,
       primaryBalance: state.primaryBalance - amount,
       transactions: nextTransactions,
-    };
-  }),
+    });
+  },
 
-  deleteGoal: (id) => set((state) => ({
-    goals: state.goals.filter((g) => g.id !== id),
-  })),
+  deleteGoal: async (id) => {
+    const state = get();
+    const { user } = state;
 
-  // Google Wallet
-  setEnableWalletInterceptor: (enabled: boolean) => set({ enableWalletInterceptor: enabled }),
+    if (user) {
+      try {
+        await supabase
+          .from('goals')
+          .delete()
+          .eq('id', id);
+      } catch (err) {
+        console.error('Failed to delete goal in Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({ goals: state.goals.filter((g) => g.id !== id) });
+  },
+
+  setEnableWalletInterceptor: async (enabled: boolean) => {
+    const state = get();
+    const { user } = state;
+
+    if (user) {
+      try {
+        await supabase
+          .from('user_settings')
+          .update({ enable_wallet_interceptor: enabled })
+          .eq('user_id', user.id);
+      } catch (err) {
+        console.error('Failed to toggle wallet interceptor in Supabase:', err);
+        throw err;
+      }
+    }
+
+    set({ enableWalletInterceptor: enabled });
+  },
 
   addWalletDraft: (input) => set((state) => {
     const draft: WalletDraft = {
@@ -589,7 +1241,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   clearWalletDrafts: () => set({ walletDrafts: [] }),
 
-  // Shared Expenses
   addFriend: (name, linkedUserId) => set((state) => {
     const newFriend: Friend = {
       id: Math.random().toString(36).substring(2, 11),
@@ -618,7 +1269,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       return f;
     });
 
-    // Log an income transaction representing the settlement
     const debitPM = state.paymentMethods.find((pm) => pm.type === 'debit');
     let nextTransactions = [...state.transactions];
 
