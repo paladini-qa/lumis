@@ -42,4 +42,12 @@ export default defineConfig({
       },
     },
   ],
+
+  /* Run local static server on the exported bundle before running E2E tests */
+  webServer: {
+    command: 'npx serve dist -p 8081',
+    url: 'http://localhost:8081',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
 });
