@@ -39,10 +39,10 @@ jobs:
           npx expo export --platform web --clear
           touch dist/.nojekyll
           mkdir -p dist/lumis
-          ln -s ../_expo dist/lumis/_expo
-          ln -s ../index.html dist/lumis/index.html
-          ln -s ../favicon.ico dist/lumis/favicon.ico
-          ln -s ../metadata.json dist/lumis/metadata.json
+          cp -r dist/_expo dist/lumis/_expo
+          cp dist/index.html dist/lumis/index.html
+          cp dist/favicon.ico dist/lumis/favicon.ico
+          cp dist/metadata.json dist/lumis/metadata.json
 
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
