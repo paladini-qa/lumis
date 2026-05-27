@@ -253,7 +253,7 @@ export function DraftReviewModal() {
                   return (
                     <Pressable
                       key={pm.id}
-                      onPress={() => setPaymentMethodId(pm.id)}
+                      onPress={() => setPaymentMethodId(pm.id || '')}
                       style={{
                         paddingVertical: 10,
                         paddingHorizontal: 14,

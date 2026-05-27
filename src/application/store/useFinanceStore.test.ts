@@ -36,7 +36,7 @@ describe('useFinanceStore Zustand Store Extensions (TDD - RED)', () => {
     const debitPM = state.paymentMethods.find(p => p.type === 'debit')!;
     const debitTxInput = {
       userId: 'user-1',
-      paymentMethodId: debitPM.id,
+      paymentMethodId: debitPM.id!,
       amount: 100.00,
       type: 'expense' as const,
       date: new Date('2026-05-25'),
@@ -53,7 +53,7 @@ describe('useFinanceStore Zustand Store Extensions (TDD - RED)', () => {
     const creditPM = state.paymentMethods.find(p => p.type === 'credit' && p.closureDay === 10)!;
     const creditTxBeforeInput = {
       userId: 'user-1',
-      paymentMethodId: creditPM.id,
+      paymentMethodId: creditPM.id!,
       amount: 150.00,
       type: 'expense' as const,
       date: new Date('2026-05-05'), // May 5th is before closure day (10th)
@@ -69,7 +69,7 @@ describe('useFinanceStore Zustand Store Extensions (TDD - RED)', () => {
     // 3. Credit transaction ON or AFTER closure day (should roll over to NEXT month)
     const creditTxAfterInput = {
       userId: 'user-1',
-      paymentMethodId: creditPM.id,
+      paymentMethodId: creditPM.id!,
       amount: 250.00,
       type: 'expense' as const,
       date: new Date('2026-05-12'), // May 12th is after closure day (10th)
@@ -90,7 +90,7 @@ describe('useFinanceStore Zustand Store Extensions (TDD - RED)', () => {
     // Add income
     useFinanceStore.getState().addTransaction({
       userId: 'user-1',
-      paymentMethodId: debitPM.id,
+      paymentMethodId: debitPM.id!,
       amount: 500.00,
       type: 'income',
       date: new Date('2026-05-26'),
@@ -103,7 +103,7 @@ describe('useFinanceStore Zustand Store Extensions (TDD - RED)', () => {
     // Add expense
     useFinanceStore.getState().addTransaction({
       userId: 'user-1',
-      paymentMethodId: debitPM.id,
+      paymentMethodId: debitPM.id!,
       amount: 150.00,
       type: 'expense',
       date: new Date('2026-05-26'),
