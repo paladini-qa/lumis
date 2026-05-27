@@ -44,7 +44,7 @@ cp .env.example .env
 | :--- | :--- | :--- |
 | `EXPO_PUBLIC_SUPABASE_URL` | Syncs variables during GitHub Pages web compilation. | Production Supabase URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Syncs variables during GitHub Pages web compilation. | Production Anon Key |
-| `SUPABASE_DB_URL` | PostgreSQL direct connection string used by the Supabase CLI setup to push migrations. | `postgresql://postgres:[password]@db.your-ref.supabase.co:6543/postgres` |
+| `SUPABASE_DB_URL` | PostgreSQL connection string used by the Supabase CLI to push migrations. **Note:** Use the Connection Pooler URL in **Session Mode (Port 5432)** to support IPv4 in GitHub Actions (direct connections are IPv6-only and will fail with a 'network is unreachable' error). | `postgresql://postgres.[your-project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres` |
 | `ANDROID_SIGNING_KEY` | Base64-encoded keystore file (`release-keystore.jks`) used by Gradle to sign the release APK. | Base64 string of your JKS file |
 
 ---

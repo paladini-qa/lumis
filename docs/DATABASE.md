@@ -22,7 +22,13 @@ Lumis uses the **Supabase CLI** and **GitHub Actions** to automate all database 
 * **The Action:** Uses the official `supabase/setup-cli` action in our workflow.
 * **Command Executed:**
   `supabase db push --db-url "${{ secrets.SUPABASE_DB_URL }}"`
+  > [!IMPORTANT]
+  > **IPv6 Connectivity Warning:** GitHub Actions runners do not support IPv6 routing by default. The direct Supabase database URL (`db.[project-ref].supabase.co`) resolves to IPv6 and will fail with `dial tcp ... connect: network is unreachable`. 
+  > To solve this, you **must** configure the `SUPABASE_DB_URL` repository secret to use the **Supavisor Connection Pooler** in **Session Mode** on port **5432**, which resolves to an IPv4 address.
+  >
+  > **Format:** `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres` (Do not use port `6543` as transaction mode does not support DDL/migrations).
 * **Result:** Supabase automatically compares the migration history, determines any new `.sql` scripts that haven't been applied to your production instance, and executes them in the correct chronological order. Zero manual overhead.
+
 
 ---
 
