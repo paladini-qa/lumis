@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Text, View, TextInput, Pressable, ScrollView, Alert } from 'react-native';
+import { Modal, Text, View, TextInput, Pressable, ScrollView, Alert, Switch } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useFinanceStore } from '../../application/store/useFinanceStore';
 import { Colors } from '../theme/colors';
@@ -10,7 +10,7 @@ interface TransactionModalProps {
 }
 
 export function TransactionModal({ visible, onClose }: TransactionModalProps) {
-  const { paymentMethods, categories, addTransaction } = useFinanceStore();
+  const { paymentMethods, categories, friendsList, addTransaction } = useFinanceStore();
 
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
@@ -20,9 +20,15 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
   const [dateStr, setDateStr] = useState(new Date().toISOString().slice(0, 10)); // YYYY-MM-DD
   const [notes, setNotes] = useState('');
 
+  // Epic 1: Complex Transactions
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [installments, setInstallments] = useState('');
+  const [splitWithFriend, setSplitWithFriend] = useState<string | null>(null);
+
   // Dropdown UI expand states
   const [showPMPicker, setShowPMPicker] = useState(false);
   const [showCatPicker, setShowCatPicker] = useState(false);
+  const [showFriendPicker, setShowFriendPicker] = useState(false);
 
   const selectedPM = paymentMethods.find((p) => p.id === paymentMethodId);
   const selectedCat = categories.find((c) => c.id === categoryId);
@@ -56,6 +62,12 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
       return;
     }
 
+    const parsedInstallments = installments.trim() ? parseInt(installments, 10) : undefined;
+    if (parsedInstallments !== undefined && (isNaN(parsedInstallments) || parsedInstallments < 1)) {
+      Alert.alert('Invalid Installments', 'Please enter a valid number of installments (1 or more).');
+      return;
+    }
+
     try {
       addTransaction({
         userId: 'user-1',
@@ -67,6 +79,9 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
         description,
         paymentStatus: 'paid',
         notes: notes.trim() || null,
+        isRecurring,
+        totalInstallments: parsedInstallments,
+        splitWithFriend,
       });
 
       // Reset form
@@ -74,8 +89,12 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
       setDescription('');
       setNotes('');
       setType('expense');
+      setIsRecurring(false);
+      setInstallments('');
+      setSplitWithFriend(null);
       setShowPMPicker(false);
       setShowCatPicker(false);
+      setShowFriendPicker(false);
       
       onClose();
     } catch (err: any) {
@@ -110,7 +129,7 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
             overflow: 'hidden',
           }}
         >
-          <ScrollView contentContainerStyle={{ padding: 24 }}>
+          <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
             {/* Header */}
             <Text
               style={{
@@ -137,7 +156,11 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
               }}
             >
               <Pressable
-                onPress={() => setType('income')}
+                onPress={() => {
+                  setType('income');
+                  setInstallments('');
+                  setSplitWithFriend(null);
+                }}
                 style={{
                   flex: 1,
                   paddingVertical: 10,
@@ -264,6 +287,7 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
                 onPress={() => {
                   setShowPMPicker(!showPMPicker);
                   setShowCatPicker(false);
+                  setShowFriendPicker(false);
                 }}
                 style={{
                   height: 48,
@@ -337,6 +361,7 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
                 onPress={() => {
                   setShowCatPicker(!showCatPicker);
                   setShowPMPicker(false);
+                  setShowFriendPicker(false);
                 }}
                 style={{
                   height: 48,
@@ -400,6 +425,151 @@ export function TransactionModal({ visible, onClose }: TransactionModalProps) {
                 </View>
               )}
             </View>
+
+            {/* Epic 1: Installments Count (Only for Credit and Expense) */}
+            {type === 'expense' && selectedPM?.type === 'credit' && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, fontFamily: 'Manrope', color: Colors.ivory.mute, marginBottom: 6 }}>
+                  Installments (optional)
+                </Text>
+                <TextInput
+                  value={installments}
+                  onChangeText={setInstallments}
+                  placeholder="e.g. 3 (leaves 3 charges of equal amount)"
+                  placeholderTextColor={Colors.ivory.mute}
+                  keyboardType="numeric"
+                  style={{
+                    height: 48,
+                    backgroundColor: Colors.backgroundOverlay,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: `${Colors.gold.DEFAULT}1A`,
+                    paddingHorizontal: 16,
+                    color: Colors.ivory.DEFAULT,
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 14,
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Epic 1: Recurring Toggle */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: Colors.backgroundOverlay,
+                borderRadius: 12,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: `${Colors.gold.DEFAULT}1A`,
+                marginBottom: 16,
+              }}
+            >
+              <View>
+                <Text style={{ color: Colors.ivory.DEFAULT, fontFamily: 'Manrope', fontSize: 13, fontWeight: '600' }}>
+                  Recurring Subscription
+                </Text>
+                <Text style={{ color: Colors.ivory.mute, fontFamily: 'Manrope', fontSize: 10 }}>
+                  Automatically repeats every month
+                </Text>
+              </View>
+              <Switch
+                value={isRecurring}
+                onValueChange={setIsRecurring}
+                trackColor={{ false: '#3E3E3E', true: Colors.gold.DEFAULT }}
+                thumbColor={isRecurring ? Colors.background : '#f4f3f4'}
+              />
+            </View>
+
+            {/* Epic 1: Hybrid Split Expense with Friend */}
+            {type === 'expense' && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, fontFamily: 'Manrope', color: Colors.ivory.mute, marginBottom: 6 }}>
+                  Split Expense 50/50 (optional)
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    setShowFriendPicker(!showFriendPicker);
+                    setShowPMPicker(false);
+                    setShowCatPicker(false);
+                  }}
+                  style={{
+                    height: 48,
+                    backgroundColor: Colors.backgroundOverlay,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: `${Colors.gold.DEFAULT}1A`,
+                    paddingHorizontal: 16,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: Colors.ivory.DEFAULT, fontFamily: 'Manrope', fontSize: 14 }}>
+                    {splitWithFriend ? `Split with ${splitWithFriend}` : 'Do not split'}
+                  </Text>
+                  <Text style={{ color: Colors.gold.DEFAULT }}>{showFriendPicker ? '▲' : '▼'}</Text>
+                </Pressable>
+
+                {showFriendPicker && (
+                  <View
+                    style={{
+                      backgroundColor: Colors.surfaceMedium,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: `${Colors.gold.DEFAULT}33`,
+                      marginTop: 4,
+                      padding: 8,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => {
+                        setSplitWithFriend(null);
+                        setShowFriendPicker(false);
+                      }}
+                      style={{
+                        paddingVertical: 10,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
+                        backgroundColor: splitWithFriend === null ? `${Colors.gold.DEFAULT}1A` : 'transparent',
+                      }}
+                    >
+                      <Text style={{ color: Colors.ivory.mute, fontFamily: 'Manrope', fontSize: 13 }}>
+                        Do not split
+                      </Text>
+                    </Pressable>
+                    {friendsList.map((friend) => (
+                      <Pressable
+                        key={friend.id}
+                        onPress={() => {
+                          setSplitWithFriend(friend.name);
+                          setShowFriendPicker(false);
+                        }}
+                        style={{
+                          paddingVertical: 10,
+                          paddingHorizontal: 12,
+                          borderRadius: 8,
+                          backgroundColor: splitWithFriend === friend.name ? `${Colors.gold.DEFAULT}1A` : 'transparent',
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Text style={{ color: Colors.ivory.DEFAULT, fontFamily: 'Manrope', fontSize: 13 }}>
+                          {friend.name}
+                        </Text>
+                        {friend.linkedUserId && (
+                          <Text style={{ color: Colors.gold.DEFAULT, fontSize: 10, fontWeight: '700' }}>
+                            SYNCED
+                          </Text>
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Notes Entry */}
             <View style={{ marginBottom: 24 }}>

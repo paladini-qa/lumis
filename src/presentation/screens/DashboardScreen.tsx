@@ -11,6 +11,12 @@ import { Colors } from '../theme/colors';
 import { formatBRL } from '../theme/currency';
 import Svg, { Path } from 'react-native-svg';
 
+// Import newly created premium screens
+import { PaymentMethodsScreen } from './PaymentMethodsScreen';
+import { GoalsScreen } from './GoalsScreen';
+import { AnalyticsScreen } from './AnalyticsScreen';
+import { ChatbotScreen } from './ChatbotScreen';
+
 export function DashboardScreen() {
   const { 
     primaryBalance, 
@@ -95,79 +101,24 @@ export function DashboardScreen() {
 
   const forecast = primaryBalance;
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
-      <StatusBar barStyle="light-content" />
-      
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        
-        {/* elegant luxury top header */}
-        <View
-          style={{
-            paddingHorizontal: 20,
-            paddingTop: 16,
-            paddingBottom: 8,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: 'Marcellus',
-              fontSize: 24,
-              fontWeight: '700',
-              color: Colors.gold.DEFAULT,
-              letterSpacing: 4,
-            }}
+  // Render content based on activeTab state
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 110 }}
           >
-            LUMIS
-          </Text>
-          
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: Colors.surface,
-              borderWidth: 1.5,
-              borderColor: `${Colors.gold.DEFAULT}33`,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M18 8A6 6 0 0 0 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"
-                stroke={Colors.gold.DEFAULT}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {/* balance card */}
+            <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+              <BalanceCard
+                value={primaryBalance}
+                isPrivate={isPrivate}
+                onTogglePrivacy={togglePrivacy}
               />
-              <Path
-                d="M13.73 21A2 2 0 0 1 10.27 21"
-                stroke={Colors.gold.DEFAULT}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </View>
-        </View>
+            </View>
 
-        {/* main scroll content */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 110 }}
-        >
-          {/* balance card */}
-          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-            <BalanceCard
-              value={primaryBalance}
-              isPrivate={isPrivate}
-              onTogglePrivacy={togglePrivacy}
-            />
-          </View>
 
           {/* Google Wallet Interceptor Toggle Bar */}
           <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
@@ -471,6 +422,82 @@ export function DashboardScreen() {
             </View>
           </View>
         </ScrollView>
+      );
+      case 'cards':
+        return <PaymentMethodsScreen />;
+      case 'goals':
+        return <GoalsScreen />;
+      case 'analytics':
+        return <AnalyticsScreen />;
+      case 'ai':
+        return <ChatbotScreen />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+      <StatusBar barStyle="light-content" />
+      
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        
+        {/* elegant luxury top header */}
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: 16,
+            paddingBottom: 8,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: 'Marcellus',
+              fontSize: 24,
+              fontWeight: '700',
+              color: Colors.gold.DEFAULT,
+              letterSpacing: 4,
+            }}
+          >
+            LUMIS
+          </Text>
+          
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: Colors.surface,
+              borderWidth: 1.5,
+              borderColor: `${Colors.gold.DEFAULT}33`,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M18 8A6 6 0 0 0 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"
+                stroke={Colors.gold.DEFAULT}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d="M13.73 21A2 2 0 0 1 10.27 21"
+                stroke={Colors.gold.DEFAULT}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </View>
+        </View>
+
+        {/* Dynamic screen views switcher */}
+        {renderContent()}
 
         {/* Floating Bottom Navigation Bar */}
         <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} />

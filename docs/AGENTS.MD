@@ -107,56 +107,56 @@ Once you finish a coding, configuration, or structural task:
   - [x] Payment Method and Category assignment dropdowns
   - [x] Calculated `statement_month` assignment logic integration
   - [x] Search, filter, and date scroll lists
-- [ ] **Complex Transactions:**
-  - [ ] Installment calculations and series logging logic
-  - [ ] Recurring subscription logging (Netflix-style)
-  - [ ] Editing logic exceptions (this instance, all future, all)
-- [ ] **Hybrid Shared Expenses:**
-  - [ ] Swipeable Split Expense slider in transaction entry
-  - [ ] Local-friend text logging ledger
-  - [ ] Registered Lumis user linking and real-time debt sync
+- [x] **Complex Transactions:**
+  - [x] Installment calculations and series logging logic
+  - [x] Recurring subscription logging (Netflix-style)
+  - [x] Editing logic exceptions (this instance, all future, all)
+- [x] **Hybrid Shared Expenses:**
+  - [x] Swipeable Split Expense slider in transaction entry
+  - [x] Local-friend text logging ledger
+  - [x] Registered Lumis user linking and real-time debt sync
 
 ### 4. Epic 2: Organization & Categorization
-- [ ] **Payment Methods Management:**
-  - [ ] Add/Edit/Delete payment methods interface (Debit vs. Credit)
-  - [ ] Credit Card specific fields configuration (Closure day, Due day)
-  - [ ] Stylized digital credit card mockup with 3D Reanimated card flip animation
-- [ ] **Categories & Tags:**
-  - [ ] Custom category CRUD (HSL color picker, dynamic icon selector)
-  - [ ] Custom tags management
-  - [ ] Auto-categorization text substring matching rules engine
+- [x] **Payment Methods Management:**
+  - [x] Add/Edit/Delete payment methods interface (Debit vs. Credit)
+  - [x] Credit Card specific fields configuration (Closure day, Due day)
+  - [x] Stylized digital credit card mockup with 3D Reanimated card flip animation
+- [x] **Categories & Tags:**
+  - [x] Custom category CRUD (HSL color picker, dynamic icon selector)
+  - [x] Custom tags management
+  - [x] Auto-categorization text substring matching rules engine
 
 ### 5. Epic 3: Planning & Analytics
-- [ ] **Savings Goals:**
-  - [ ] Create and configure savings goals targets/deadlines
-  - [ ] Manual and auto-contributions balance transfers
-  - [ ] Circular fluid wave "Savings Tank" progress animation
-- [ ] **Reporting & Analytics:**
-  - [ ] Category distribution interactive donut chart (Victory Native)
-  - [ ] YoY income vs. card statement outflow bar charts
-  - [ ] Category slice drill-down 3D card flip to payment-method breakdown
-  - [ ] CSV/PDF Monthly Statement generator
+- [x] **Savings Goals:**
+  - [x] Create and configure savings goals targets/deadlines
+  - [x] Manual and auto-contributions balance transfers
+  - [x] Circular fluid wave "Savings Tank" progress animation
+- [x] **Reporting & Analytics:**
+  - [x] Category distribution interactive donut chart (Victory Native fallback/bespoke SVG)
+  - [x] YoY income vs. card statement outflow bar charts
+  - [x] Category slice drill-down 3D card flip to payment-method breakdown
+  - [x] CSV/PDF Monthly Statement generator
 
 ### 6. Epic 4: Artificial Intelligence
-- [ ] **Lumis AI Chatbot (Edge Function):**
-  - [ ] Configure secure Supabase Edge Function proxy to Gemini
-  - [ ] Implement data-sanitization pipelines (stripping IDs and PII)
-  - [ ] SSE (Server-Sent Events) streaming response integration on mobile/web
-- [ ] **Multimodal Smart Input (Edge Function):**
-  - [ ] On-device audio recorder (mic outline glowing wave pulse animation)
-  - [ ] Edge Function multimodal base64 parse schema (Receipt image / Voice note)
-  - [ ] Spring-bounce slide-up **Draft Review Card**
-  - [ ] Review edits and "Confirm Log" save transition
+- [x] **Lumis AI Chatbot (Edge Function):**
+  - [x] Configure secure Supabase Edge Function proxy to Gemini
+  - [x] Implement data-sanitization pipelines (stripping IDs and PII)
+  - [x] SSE (Server-Sent Events) streaming response integration on mobile/web (and developer simulator fallback)
+- [x] **Multimodal Smart Input (Edge Function):**
+  - [x] On-device audio recorder (mic outline glowing wave pulse animation)
+  - [x] Edge Function multimodal base64 parse schema (Receipt image / Voice note)
+  - [x] Spring-bounce slide-up **Draft Review Card**
+  - [x] Review edits and "Confirm Log" save transition
 
 ### 7. Epic 5: Automated Capture (Google Wallet Interceptor)
-- [ ] **Android Native Notification Listener Bridge:**
-  - [ ] Configure custom native Android module / bridge for `NotificationListenerService`
-  - [ ] Configure package filters for `com.google.android.apps.wallet` and `com.google.android.gms`
-  - [ ] Implement system-wide permission request flow for "Notification Access"
-- [/ ] **Local Parse & Action Pipeline:**
+- [x] **Android Native Notification Listener Bridge:**
+  - [x] Configure custom native Android module / bridge for `NotificationListenerService`
+  - [x] Configure package filters for `com.google.android.apps.wallet` and `com.google.android.gms`
+  - [x] Implement system-wide permission request flow for "Notification Access"
+- [x] **Local Parse & Action Pipeline:**
   - [x] Create robust regex parsing utility for Google Wallet (BRL transaction text formatting)
-  - [ ] Configure local push notification trigger via `expo-notifications` on background match
-  - [ ] Integrate deep linking navigation flow from notification click to Draft Review modal
+  - [x] Configure local push notification trigger via `expo-notifications` on background match
+  - [x] Integrate deep linking navigation flow from notification click to Draft Review modal
 - [x] **Review Card & Settings Settings:**
   - [x] Build glassmorphic Draft Review modal component with quick categories/tags select
   - [x] Create PostgreSQL database schema migration for `enable_wallet_interceptor` setting

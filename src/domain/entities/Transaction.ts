@@ -11,9 +11,13 @@ export interface TransactionInput {
   statementMonth: Date;
   notes?: string | null;
   isRecurring?: boolean;
+  recurringId?: string | null;
   installmentId?: string | null;
   installmentNumber?: number | null;
   totalInstallments?: number | null;
+  splitWith?: string | null;
+  splitAmount?: number | null;
+  linkedUserId?: string | null;
 }
 
 export class Transaction implements TransactionInput {
@@ -29,9 +33,13 @@ export class Transaction implements TransactionInput {
   statementMonth: Date;
   notes?: string | null;
   isRecurring?: boolean;
+  recurringId?: string | null;
   installmentId?: string | null;
   installmentNumber?: number | null;
   totalInstallments?: number | null;
+  splitWith?: string | null;
+  splitAmount?: number | null;
+  linkedUserId?: string | null;
 
   constructor(data: TransactionInput) {
     validateTransaction(data);
@@ -47,9 +55,13 @@ export class Transaction implements TransactionInput {
     this.statementMonth = data.statementMonth;
     this.notes = data.notes;
     this.isRecurring = data.isRecurring;
+    this.recurringId = data.recurringId;
     this.installmentId = data.installmentId;
     this.installmentNumber = data.installmentNumber;
     this.totalInstallments = data.totalInstallments;
+    this.splitWith = data.splitWith;
+    this.splitAmount = data.splitAmount;
+    this.linkedUserId = data.linkedUserId;
   }
 }
 
